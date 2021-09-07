@@ -1,13 +1,20 @@
 from tkinter import *
 from tkinter import ttk
 from link import *
+import socket
+from _thread import *
+import queue
 
 nickname_global = "shocker" # Hardcoded, should be the first thing a user sets up when opening the app
-connected_users = ['shocker', 'markidane', 'pixelranger', 'cookieofdeath01']
+connected_users = []
 
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 class TextChat:
-    def __init__(self, root):
+    def __init__(self, root, queue):
+        # Queue for listening
+        self.queue = queue
+
         # Main frame configuration
         mainframe = ttk.LabelFrame(root, text="Text Chat", padding="3 3 12 12")
         mainframe.grid(column=1, row=0, sticky=(N, W, E, S))
@@ -35,16 +42,30 @@ class TextChat:
         message_entry.focus()
         root.bind("<Return>", self.send_message)
 
+        start_new_thread(listen, ())
+
     def send_message(self, *args):
         try:
             if self.message.get() != '':
-                self.log.configure(state=NORMAL)
-                self.log.insert(END, str(nickname_global + ": " + self.message.get() + '\n'))
-                self.log.see(END)
-                self.log.configure(state=DISABLED)
+                #self.log.configure(state=NORMAL)
+                #self.log.insert(END, str(nickname_global + ": " + self.message.get() + '\n'))
+                #self.log.see(END)
+                #self.log.configure(state=DISABLED)
+                server.send(self.message.get().encode(encoding='utf-8'))
                 self.message.set('')
         except Exception as e:
             print(e)
+    
+    def update_log(self):
+        while self.queue.qsize():
+            try:
+                msg = self.queue.get(0)
+                self.log.configure(state=NORMAL)
+                self.log.insert(END, str(nickname_global + ": " + msg + '\n'))
+                self.log.see(END)
+                self.log.configure(state=DISABLED)
+            except:
+                continue
 
 class VoiceChat:
     def __init__(self, root):
@@ -69,24 +90,56 @@ class VoiceChat:
 
 
 class MainApp:
-    def __init__(self):
-        pass
+    def __init__(self, root):
+        self.queue = queue.Queue()
+        self.root = root
 
     def setup(self, server_ip, nickname):
+        # Connecting
+        IP_address = server_ip#"127.0.0.1"
+        Port = 8081
+        server.connect((IP_address, Port))
+        
         global nickname_global
         nickname_global = nickname
+        connected_users.append(nickname)
         self.root = Tk()
         self.root.title("Dissension")
         self.root.minsize(600,400)
         self.root.wm_resizable(False, False)
-        textChat = TextChat(self.root)
+        self.textChat = TextChat(self.root, self.queue)
         voiceChat = VoiceChat(self.root)
         voiceChat.refresh_user_list()
-        return self.root
 
-main_app = MainApp()
+        self.periodicCall()
+
+        return self.root
+    
+    def getTextChat(self):
+        return self.textChat
+    
+    def push_to_queue(self, message):
+        self.queue.put(message)
+    
+    def periodicCall(self):
+        self.textChat.update_log()
+        self.root.after(100, self.periodicCall)
+
+def listen():
+    while True:
+        message = server.recv(2048)
+        main_app.push_to_queue(message.decode())
+    #    sockets_list = [server]
+    #    read_sockets,write_socket, error_socket = select.select(sockets_list,[],[])
+    #    print("da li ovo sad kao radi")
+    #    for socks in read_sockets:
+    #        #if socks == server:
+    #        message = socks.recv(2048)
+    #        print(message)
+    #        print("Primio sam makar nesto jebem li ga")
 
 link_root = Tk()
+main_app = MainApp(link_root)
 link_root.title("Link")
 link_root.minsize(200,100)
 link_root.wm_resizable(False, False)
