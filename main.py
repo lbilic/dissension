@@ -58,12 +58,12 @@ class TextChat:
             print(e)
     
     def update_log(self):
+        global connected_users
         while self.queue.qsize():
             try:
                 msg = self.queue.get(0)
-                print(msg)
                 if HANDSHAKE_MESSAGE in msg:
-                    connected_users.append(msg.split(HANDSHAKE_MESSAGE)[0].strip())
+                    connected_users = (msg.split(HANDSHAKE_MESSAGE)[0].strip()).split(';')
                 else:
                     self.log.configure(state=NORMAL)
                     self.log.insert(END, str(msg + '\n'))

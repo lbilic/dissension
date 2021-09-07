@@ -32,7 +32,7 @@ def clientthread(conn, addr):
                     connected_user = message.decode().split(HANDSHAKE_MESSAGE)[0].strip()
                     if connected_user != client_names:
                         client_names.append(connected_user)
-                        broadcast_message(client_names)
+                        broadcast_message(str(';'.join(client_names).join(HANDSHAKE_MESSAGE)).encode())
                 else:
                     print("<" + addr[0] + ">" + message.decode())
                     message_to_send = message.decode()
