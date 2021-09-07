@@ -7,6 +7,7 @@ import queue
 
 nickname_global = "shocker" # Hardcoded, should be the first thing a user sets up when opening the app
 connected_users = []
+HANDSHAKE_MESSAGE = "mysecretfornow"
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -60,10 +61,13 @@ class TextChat:
         while self.queue.qsize():
             try:
                 msg = self.queue.get(0)
-                self.log.configure(state=NORMAL)
-                self.log.insert(END, str(msg + '\n'))
-                self.log.see(END)
-                self.log.configure(state=DISABLED)
+                if HANDSHAKE_MESSAGE in msg:
+                    connected_users.append(msg.split(HANDSHAKE_MESSAGE)[0].strip())
+                else:
+                    self.log.configure(state=NORMAL)
+                    self.log.insert(END, str(msg + '\n'))
+                    self.log.see(END)
+                    self.log.configure(state=DISABLED)
             except:
                 continue
 
@@ -95,12 +99,15 @@ class MainApp:
         self.root = root
 
     def setup(self, server_ip, nickname):
+        global nickname_global
+        
         # Connecting
         IP_address = server_ip#"127.0.0.1"
         Port = 11066
         server.connect((IP_address, Port))
+        login_message = nickname_global + HANDSHAKE_MESSAGE
+        server.send(login_message.encode())
         
-        global nickname_global
         nickname_global = nickname
         connected_users.append(nickname)
         self.root = Tk()

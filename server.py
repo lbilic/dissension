@@ -5,6 +5,7 @@ from _thread import *
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+HANDSHAKE_MESSAGE = "mysecretfornow"
 
 if len(sys.argv) != 3:
     print("Correct usage: script, IP address, port number")
@@ -25,9 +26,13 @@ def clientthread(conn, addr):
         try:
             message = conn.recv(2048)
             if message:
-                print("<" + addr[0] + ">" + message.decode())
-                message_to_send = message.decode()
-                broadcast_message(message_to_send, conn)
+                if "mysecretfornow" in message.decode():
+                    handshake_message = message.decode()
+                    broadcast_message(handshake_message, conn)
+                else:
+                    print("<" + addr[0] + ">" + message.decode())
+                    message_to_send = message.decode()
+                    broadcast_message(message_to_send, conn)
             else:
                 remove(conn)
         except:
