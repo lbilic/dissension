@@ -51,7 +51,7 @@ class TextChat:
                 #self.log.insert(END, str(nickname_global + ": " + self.message.get() + '\n'))
                 #self.log.see(END)
                 #self.log.configure(state=DISABLED)
-                server.send(self.message.get().encode(encoding='utf-8'))
+                server.send(str(nickname_global + ": " + self.message.get()).encode(encoding='utf-8'))
                 self.message.set('')
         except Exception as e:
             print(e)
@@ -61,7 +61,7 @@ class TextChat:
             try:
                 msg = self.queue.get(0)
                 self.log.configure(state=NORMAL)
-                self.log.insert(END, str(nickname_global + ": " + msg + '\n'))
+                self.log.insert(END, str(msg + '\n'))
                 self.log.see(END)
                 self.log.configure(state=DISABLED)
             except:
@@ -97,7 +97,7 @@ class MainApp:
     def setup(self, server_ip, nickname):
         # Connecting
         IP_address = server_ip#"127.0.0.1"
-        Port = 8081
+        Port = 11066
         server.connect((IP_address, Port))
         
         global nickname_global
