@@ -61,6 +61,7 @@ class TextChat:
         while self.queue.qsize():
             try:
                 msg = self.queue.get(0)
+                print(msg)
                 if HANDSHAKE_MESSAGE in msg:
                     connected_users.append(msg.split(HANDSHAKE_MESSAGE)[0].strip())
                 else:
@@ -100,15 +101,15 @@ class MainApp:
 
     def setup(self, server_ip, nickname):
         global nickname_global
-        
+        nickname_global = nickname
+
         # Connecting
         IP_address = server_ip#"127.0.0.1"
         Port = 11066
         server.connect((IP_address, Port))
         login_message = nickname_global + HANDSHAKE_MESSAGE
         server.send(login_message.encode())
-        
-        nickname_global = nickname
+    
         connected_users.append(nickname)
         self.root = Tk()
         self.root.title("Dissension")

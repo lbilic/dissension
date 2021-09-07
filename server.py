@@ -18,6 +18,7 @@ server.bind((IP_address, Port))
 
 server.listen(100)
 list_of_clients = []
+client_names = []
 
 def clientthread(conn, addr):
     #conn.send(b"Welcome to Dissension!")
@@ -26,9 +27,12 @@ def clientthread(conn, addr):
         try:
             message = conn.recv(2048)
             if message:
-                if "mysecretfornow" in message.decode():
-                    handshake_message = message.decode()
-                    broadcast_message(handshake_message, conn)
+                print(message.decode())
+                if HANDSHAKE_MESSAGE in message.decode():
+                    connected_user = message.decode().split(HANDSHAKE_MESSAGE)[0].strip()
+                    if connected_user != client_names:
+                        client_names.append(connected_user)
+                        broadcast_message(client_names)
                 else:
                     print("<" + addr[0] + ">" + message.decode())
                     message_to_send = message.decode()
