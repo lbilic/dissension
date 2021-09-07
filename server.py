@@ -1,5 +1,4 @@
 import socket
-import select
 import sys
 from threading import *
 from _thread import *
