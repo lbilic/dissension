@@ -117,8 +117,8 @@ class MainApp:
         self.root.minsize(600,400)
         self.root.wm_resizable(False, False)
         self.textChat = TextChat(self.root, self.queue)
-        voiceChat = VoiceChat(self.root)
-        voiceChat.refresh_user_list()
+        self.voiceChat = VoiceChat(self.root)
+        self.voiceChat.refresh_user_list()
 
         self.periodicCall()
 
@@ -127,11 +127,15 @@ class MainApp:
     def getTextChat(self):
         return self.textChat
     
+    def getVoiceChat(self):
+        return self.voiceChat
+    
     def push_to_queue(self, message):
         self.queue.put(message)
     
     def periodicCall(self):
         self.textChat.update_log()
+        self.voiceChat.refresh_user_list()
         self.root.after(100, self.periodicCall)
 
 def listen():
