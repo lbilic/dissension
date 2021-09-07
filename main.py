@@ -63,7 +63,8 @@ class TextChat:
             try:
                 msg = self.queue.get(0)
                 if HANDSHAKE_MESSAGE in msg:
-                    connected_users = (msg.split(HANDSHAKE_MESSAGE)[0].strip()).split(';')
+                    connected_users_list = msg.replace(HANDSHAKE_MESSAGE, '')
+                    connected_users = connected_users_list.strip().split(';')
                 else:
                     self.log.configure(state=NORMAL)
                     self.log.insert(END, str(msg + '\n'))
