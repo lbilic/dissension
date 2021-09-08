@@ -3,9 +3,12 @@ import sys
 from threading import *
 from _thread import *
 
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 HANDSHAKE_MESSAGE = "mysecretfornow"
+BUFFER_SIZE = 1024
+BROADCASTING_PORT = 11067
+
+server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
 if len(sys.argv) != 3:
     print("Correct usage: script, IP address, port number")
@@ -16,41 +19,42 @@ Port = int(sys.argv[2])
 
 server.bind((IP_address, Port))
 
-server.listen(100)
+#server.listen(100)
 list_of_clients = []
 client_names = []
 
-def clientthread(conn, addr):
-    #conn.send(b"Welcome to Dissension!")
+# OLD CODE CURRENTLY COMMENTED OUT FOR UDP TESTING
+#def clientthread(conn, addr):
+#    #conn.send(b"Welcome to Dissension!")
+#
+#    while True:
+#        try:
+#            message = conn.recv(2048)
+#            if message:
+#                print(message.decode())
+#                if HANDSHAKE_MESSAGE in message.decode():
+#                    connected_user = message.decode().split(HANDSHAKE_MESSAGE)[0].strip()
+#                    if connected_user != client_names:
+#                        client_names.append(connected_user)
+#                        userlist = ';'.join(client_names) + HANDSHAKE_MESSAGE
+#                        broadcast_message(userlist, conn)
+#                else:
+#                    print("<" + addr[0] + ">" + message.decode())
+#                    message_to_send = message.decode()
+#                    broadcast_message(message_to_send, conn)
+#            else:
+#                remove(conn)
+#        except:
+#            continue
 
-    while True:
-        try:
-            message = conn.recv(2048)
-            if message:
-                print(message.decode())
-                if HANDSHAKE_MESSAGE in message.decode():
-                    connected_user = message.decode().split(HANDSHAKE_MESSAGE)[0].strip()
-                    if connected_user != client_names:
-                        client_names.append(connected_user)
-                        userlist = ';'.join(client_names) + HANDSHAKE_MESSAGE
-                        broadcast_message(userlist, conn)
-                else:
-                    print("<" + addr[0] + ">" + message.decode())
-                    message_to_send = message.decode()
-                    broadcast_message(message_to_send, conn)
-            else:
-                remove(conn)
-        except:
-            continue
-
-def broadcast_message(message, connection):
+def broadcast_message(message):
     for client in list_of_clients:
         if True:#client != connection:
             try:
-                client.send(message.encode())
+                server.sendto(message, (client[0], BROADCASTING_PORT))
             except Exception as e:
                 print(e)
-                client.close()
+                #client.close()
  
                 # if the link is broken, we remove the client
                 remove(client)
@@ -61,14 +65,22 @@ def remove(connection):
  
 while True:
  
-    conn, addr = server.accept()
+    #conn, addr = server.accept()
     #server.listen()
 
-    list_of_clients.append(conn)
- 
-    print (addr[0] + " connected")
+    #list_of_clients.append(conn)
 
-    start_new_thread(clientthread,(conn,addr))
+    #print (addr[0] + " connected")
+
+    #start_new_thread(clientthread,(conn,addr))
+
+    # New code, switching from TCP to UDP
+
+    data, addr = server.recvfrom(BUFFER_SIZE)
+    if addr not in list_of_clients:
+        list_of_clients.append(addr)
+    broadcast_message(data)
+    #server.sendto(b"Welcome to Dissension!", addr)
  
-conn.close()
-server.close()
+#conn.close()
+#server.close()
