@@ -112,8 +112,10 @@ class MainApp:
 
         # Connecting
         IP_address = server_ip#"127.0.0.1"
-        hostname = socket.gethostname()
-        local_ip = socket.gethostbyname(hostname)
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
         server.bind((local_ip, LISTENING_PORT))
         login_message = nickname_global + HANDSHAKE_MESSAGE
         server.sendto(login_message.encode(), (IP_address, SENDING_PORT))
