@@ -1,3 +1,4 @@
+from client import IP_address
 from tkinter import *
 from tkinter import ttk
 from link import *
@@ -10,10 +11,11 @@ connected_users = []
 HANDSHAKE_MESSAGE = "mysecretfornow"
 BUFFER_SIZE = 1024
 LISTENING_PORT = 11067
-SENDING_PORT = 11066
+SENDING_PORT = 3481
 
 server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+IP_address = ''
 
 class TextChat:
     def __init__(self, root, queue):
@@ -56,7 +58,7 @@ class TextChat:
                 #self.log.insert(END, str(nickname_global + ": " + self.message.get() + '\n'))
                 #self.log.see(END)
                 #self.log.configure(state=DISABLED)
-                server.sendto(str(nickname_global + ": " + self.message.get()).encode(encoding='utf-8'), ('localhost',11066))
+                server.sendto(str(nickname_global + ": " + self.message.get()).encode(encoding='utf-8'), (IP_address,SENDING_PORT))
                 self.message.set('')
         except Exception as e:
             print(e)
@@ -106,11 +108,12 @@ class MainApp:
 
     def setup(self, server_ip, nickname):
         global nickname_global
+        global IP_address
         nickname_global = nickname
 
         # Connecting
         IP_address = server_ip#"127.0.0.1"
-        server.bind((IP_address, LISTENING_PORT))
+        server.bind(('localhost', LISTENING_PORT))
         login_message = nickname_global + HANDSHAKE_MESSAGE
         server.sendto(login_message.encode(), (IP_address, SENDING_PORT))
 

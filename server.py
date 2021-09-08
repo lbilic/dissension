@@ -77,6 +77,7 @@ while True:
     # New code, switching from TCP to UDP
 
     data, addr = server.recvfrom(BUFFER_SIZE)
+    print(data.decode())
     if addr not in list_of_clients:
         list_of_clients.append(addr)
     broadcast_message(data)
