@@ -112,7 +112,9 @@ class MainApp:
 
         # Connecting
         IP_address = server_ip#"127.0.0.1"
-        server.bind(('localhost', LISTENING_PORT))
+        hostname = socket.gethostname()
+        local_ip = socket.gethostbyname(hostname)
+        server.bind((local_ip, LISTENING_PORT))
         login_message = nickname_global + HANDSHAKE_MESSAGE
         server.sendto(login_message.encode(), (IP_address, SENDING_PORT))
 
