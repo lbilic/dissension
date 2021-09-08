@@ -24,7 +24,7 @@ class TextChat:
 
 
         # Chat log
-        self.log = Text(mainframe, height=25, width=200, bg="gray", state=DISABLED, cursor='')
+        self.log = Text(mainframe, height=40, width=95, bg="gray", state=DISABLED, cursor='')
         self.log.grid(column=2, row=1, sticky=(W,E))
         self.vsb = Scrollbar(mainframe, orient="vertical", command=self.log.yview)
         self.vsb.grid(column=3, row=1, sticky=(N, S))
@@ -110,11 +110,12 @@ class MainApp:
         server.connect((IP_address, Port))
         login_message = nickname_global + HANDSHAKE_MESSAGE
         server.send(login_message.encode())
-    
+
         connected_users.append(nickname)
         self.root = Tk()
         self.root.title("Dissension")
-        self.root.minsize(600,400)
+        self.root.geometry("1280x720")
+        self.root.minsize(1280,720)
         self.root.wm_resizable(False, False)
         self.textChat = TextChat(self.root, self.queue)
         self.voiceChat = VoiceChat(self.root)
@@ -123,7 +124,7 @@ class MainApp:
         self.periodicCall()
 
         return self.root
-    
+
     def getTextChat(self):
         return self.textChat
     
