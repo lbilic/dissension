@@ -1,4 +1,3 @@
-from client import IP_address
 from tkinter import *
 from tkinter import ttk
 from link import *
