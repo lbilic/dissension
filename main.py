@@ -97,7 +97,7 @@ class VoiceChat:
         for idx, user in enumerate(connected_users):
             self.user_names.append(StringVar())
             self.user_names[idx].set(user)
-            Label(self.mainframe, textvariable=self.user_names[idx]).grid(column=0, row=1+idx, sticky=(W,E))
+            Label(self.mainframe, textvariable=self.user_names[idx]).grid(column=0, row=1+idx, sticky=(W))
 
 
 class MainApp:

@@ -76,10 +76,18 @@ while True:
 
     # New code, switching from TCP to UDP
 
-    data, addr = server.recvfrom(BUFFER_SIZE)
+    message, addr = server.recvfrom(BUFFER_SIZE)
     if addr not in list_of_clients:
         list_of_clients.append(addr)
-    broadcast_message(data)
+    if HANDSHAKE_MESSAGE in message.decode():
+        connected_user = message.decode().split(HANDSHAKE_MESSAGE)[0].strip()
+        if connected_user != client_names:
+            client_names.append(connected_user)
+            userlist = ';'.join(client_names) + HANDSHAKE_MESSAGE
+            broadcast_message(userlist.encode())
+    else:
+        print("<" + addr[0] + ">" + message.decode())
+        broadcast_message(message)
     #server.sendto(b"Welcome to Dissension!", addr)
  
 #conn.close()
