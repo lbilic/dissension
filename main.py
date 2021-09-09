@@ -5,16 +5,26 @@ import socket
 from _thread import *
 import queue
 
-nickname_global = "shocker" # Hardcoded, should be the first thing a user sets up when opening the app
+nickname_global = "" # Hardcoded, should be the first thing a user sets up when opening the app
 connected_users = []
 HANDSHAKE_MESSAGE = "mysecretfornow"
 BUFFER_SIZE = 1024
 LISTENING_PORT = 11067
-SENDING_PORT = 3481
+TEXT_SENDING_PORT = 3480
+VOICE_SENDING_PORT = 3481
+SERVER_IP_address = ''
 
-server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-IP_address = ''
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.connect(("8.8.8.8", 80))
+LOCAL_IP_ADDRESS = s.getsockname()[0]
+s.close()
+
+# Voice chat
+voice_server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+voice_server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+
+# Text chat
+text_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 class TextChat:
     def __init__(self, root, queue):
@@ -39,9 +49,6 @@ class TextChat:
         message_entry = ttk.Entry(mainframe, width=20, textvariable=self.message)
         message_entry.grid(column=2, row=2, sticky=(W, E))
 
-        # Button removed for aestetic purposes
-        #ttk.Button(mainframe, text="Send Message", command=send_message).grid(column=2, row=3, sticky=(E))
-
         for child in mainframe.winfo_children(): 
             child.grid_configure(padx=5, pady=5)
 
@@ -53,11 +60,7 @@ class TextChat:
     def send_message(self, *args):
         try:
             if self.message.get() != '':
-                #self.log.configure(state=NORMAL)
-                #self.log.insert(END, str(nickname_global + ": " + self.message.get() + '\n'))
-                #self.log.see(END)
-                #self.log.configure(state=DISABLED)
-                server.sendto(str(nickname_global + ": " + self.message.get()).encode(encoding='utf-8'), (IP_address,SENDING_PORT))
+                text_server.send(str(nickname_global + ": " + self.message.get()).encode(encoding='utf-8'))
                 self.message.set('')
         except Exception as e:
             print(e)
@@ -107,18 +110,18 @@ class MainApp:
 
     def setup(self, server_ip, nickname):
         global nickname_global
-        global IP_address
+        global SERVER_IP_address
+        global LOCAL_IP_ADDRESS
         nickname_global = nickname
 
         # Connecting
-        IP_address = server_ip#"127.0.0.1"
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        local_ip = s.getsockname()[0]
-        s.close()
-        server.bind((local_ip, LISTENING_PORT))
+        SERVER_IP_address = server_ip
+        text_server.connect((LOCAL_IP_ADDRESS, TEXT_SENDING_PORT))
+        voice_server.bind((LOCAL_IP_ADDRESS, LISTENING_PORT))
+
+        # Send login message
         login_message = nickname_global + HANDSHAKE_MESSAGE
-        server.sendto(login_message.encode(), (IP_address, SENDING_PORT))
+        text_server.send(login_message.encode())
 
         connected_users.append(nickname)
         self.root = Tk()
@@ -150,16 +153,12 @@ class MainApp:
 
 def listen():
     while True:
-        message, _ = server.recvfrom(BUFFER_SIZE)
+        message = text_server.recv(BUFFER_SIZE)
         main_app.push_to_queue(message.decode())
-    #    sockets_list = [server]
-    #    read_sockets,write_socket, error_socket = select.select(sockets_list,[],[])
-    #    print("da li ovo sad kao radi")
-    #    for socks in read_sockets:
-    #        #if socks == server:
-    #        message = socks.recv(2048)
-    #        print(message)
-    #        print("Primio sam makar nesto jebem li ga")
+
+def on_closing():
+    text_server.close()
+    voice_server.close()
 
 link_root = Tk()
 main_app = MainApp(link_root)
@@ -169,3 +168,4 @@ link_root.minsize(320,240)
 link_root.wm_resizable(False, False)
 link_gui = Link(link_root, main_app)
 link_root.mainloop()
+link_root.protocol("WM_DELETE_WINDOW", on_closing)
