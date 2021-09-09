@@ -3,12 +3,17 @@ from tkinter import ttk
 from link import *
 import socket
 from _thread import *
+import threading, pyaudio
 import queue
 
 nickname_global = "" # Hardcoded, should be the first thing a user sets up when opening the app
 connected_users = []
+recorded_frames = []
+received_frames = {}
+play_threads = []
 HANDSHAKE_MESSAGE = "mysecretfornow"
 BUFFER_SIZE = 1024
+VOICE_BUFFER_SIZE = 65536
 LISTENING_PORT = 11067
 TEXT_SENDING_PORT = 3480
 VOICE_SENDING_PORT = 3481
@@ -21,7 +26,7 @@ s.close()
 
 # Voice chat
 voice_server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-voice_server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+voice_server.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, VOICE_BUFFER_SIZE)
 
 # Text chat
 text_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -106,7 +111,20 @@ class VoiceChat:
 class MainApp:
     def __init__(self, root):
         self.queue = queue.Queue()
+        self.audio_change = queue.Queue()
         self.root = root
+        CHUNK = 1024
+        FORMAT = pyaudio.paInt16
+        CHANNELS = 2
+        RATE = 44100
+        p = pyaudio.PyAudio()
+        self.recording_stream = p.open(format = FORMAT, channels = CHANNELS, rate = RATE,  input = True, frames_per_buffer = CHUNK)
+        self.play_streams = {}
+        self.play_stream = p.open(format=FORMAT, channels = CHANNELS, rate = RATE, output = True, frames_per_buffer = CHUNK)
+        self.thread_record = threading.Thread(target=record_audio, args=(self.recording_stream,CHUNK))
+        self.thread_send = threading.Thread(target=udp_send)
+        self.thread_receive = threading.Thread(target = udp_receive, args=(self.play_streams, p))
+        #self.thread_play = threading.Thread(target = play, args=(self.play_stream, CHUNK,))
 
     def setup(self, server_ip, nickname):
         global nickname_global
@@ -118,6 +136,16 @@ class MainApp:
         SERVER_IP_address = server_ip
         text_server.connect((LOCAL_IP_ADDRESS, TEXT_SENDING_PORT))
         voice_server.bind((LOCAL_IP_ADDRESS, LISTENING_PORT))
+
+        self.thread_record.setDaemon(True)
+        self.thread_send.setDaemon(True)
+        self.thread_record.start()
+        self.thread_send.start()
+
+        self.thread_receive.setDaemon(True)
+        #self.thread_play.setDaemon(True)
+        self.thread_receive.start()
+        #self.thread_play.start()
 
         # Send login message
         login_message = nickname_global + HANDSHAKE_MESSAGE
@@ -143,13 +171,68 @@ class MainApp:
     def getVoiceChat(self):
         return self.voiceChat
     
-    def push_to_queue(self, message):
-        self.queue.put(message)
+    def push_to_queue(self, message, audio=False):
+        if audio:
+            self.audio_queue.put(message)
+        else:
+            self.queue.put(message)
     
     def periodicCall(self):
         self.textChat.update_log()
         self.voiceChat.refresh_user_list()
         self.root.after(100, self.periodicCall)
+
+def record_audio(stream, CHUNK):
+    while True:
+        recorded_frames.append(stream.read(CHUNK))
+
+def udp_send():
+    udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    while True:
+        if len(recorded_frames) > 0:
+            data = recorded_frames.pop(0)
+            udp.sendto(data, (SERVER_IP_address, VOICE_SENDING_PORT))
+    udp.close()
+
+def udp_receive(play_streams, p):
+    while True:
+        soundData, addr = voice_server.recvfrom(1024 * 2 * 2) # CHUNK * 2 * channels
+        current_user = ''
+        try:
+            if "user:" in soundData.decode():
+                current_user = soundData.decode().split(':')[1]
+        except:
+            if current_user in received_frames.keys():
+                received_frames[current_user].append(soundData)
+            else:
+                received_frames[current_user] = []
+                play_streams[current_user] = p.open(format=pyaudio.paInt16, channels = 2, rate = 44100, output = True, frames_per_buffer = 1024)
+                t = threading.Thread(target=play_2, args=(play_streams[current_user], current_user))
+                #play_threads.append(t)
+                t.start()
+
+
+    udp.close()
+
+def play(stream, CHUNK):
+    BUFFER = 10
+    while True:
+        for client in received_frames.keys():
+            if len(received_frames[client]) == BUFFER:
+                while True:
+                    if len(received_frames[client]) > 0:
+                        stream.write(received_frames[client].pop(0), CHUNK)
+
+def play_2(stream, client):
+    BUFFER = 10
+    while True:
+        if len(received_frames[client]) == BUFFER:
+            while True:
+                if len(received_frames[client]) > 0:
+                    stream.write(received_frames[client].pop(0), 1024)
+
+def write(stream, CHUNK):
+    pass
 
 def listen():
     while True:
@@ -159,13 +242,15 @@ def listen():
 def on_closing():
     text_server.close()
     voice_server.close()
+    link_root.destroy()
 
-link_root = Tk()
-main_app = MainApp(link_root)
-link_root.title("Link")
-link_root.geometry("320x240+320+160")
-link_root.minsize(320,240)
-link_root.wm_resizable(False, False)
-link_gui = Link(link_root, main_app)
-link_root.mainloop()
-link_root.protocol("WM_DELETE_WINDOW", on_closing)
+if __name__ == '__main__':
+    link_root = Tk()
+    link_root.protocol("WM_DELETE_WINDOW", on_closing)
+    main_app = MainApp(link_root)
+    link_root.title("Link")
+    link_root.geometry("320x240+320+160")
+    link_root.minsize(320,240)
+    link_root.wm_resizable(False, False)
+    link_gui = Link(link_root, main_app)
+    link_root.mainloop()
